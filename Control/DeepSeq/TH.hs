@@ -18,8 +18,10 @@ module Control.DeepSeq.TH
 
 import Control.DeepSeq     (NFData(rnf),deepseq)
 import Control.Monad       (mzero,liftM,mplus)
+import Data.Int
 import Data.List
 import Data.Maybe          (fromMaybe, isJust, catMaybes)
+import Data.Word
 import Language.Haskell.TH
 
 -- |Try to infer whether 'Type' has the property that WHNF=NF for its
@@ -39,7 +41,7 @@ typeWhnfIsNf = typeWhnfIsNf2 []
 
 typeWhnfIsNf2 :: [Name] -> Type -> Q (Maybe Bool)
 typeWhnfIsNf2 seen (ConT x)
-    | x `elem` [''Int, ''Double, ''Float, ''Char, ''Bool, ''()] = return $ Just True
+    | x `elem` knownWhnfIsNfNames = return $ Just True
     | x `elem` seen = return $ Just True  -- FIXME: check whether this correct
                       -- e.g. it might break with parametrized types (which we don't handle yet anyway)
     | otherwise = do
@@ -52,6 +54,15 @@ typeWhnfIsNf2 _ (AppT (AppT ArrowT _) _) = return $ Just True -- a -> b
 typeWhnfIsNf2 _ (AppT ListT _)           = return $ Just False -- [a]
 typeWhnfIsNf2 _ (AppT (TupleT _) _)      = return $ Just False -- (a,b,...)
 typeWhnfIsNf2 _ _                        = return  Nothing
+
+-- |Whilelist of 'Name' known to be WHNF=NF
+knownWhnfIsNfNames :: [Name]
+knownWhnfIsNfNames =
+    [ ''Int, ''Integer, ''Double, ''Float, ''Char
+    , ''Bool, ''(), ''Ordering
+    , ''Int8, ''Int16, ''Int32, ''Int64
+    , ''Word8, ''Word16, ''Word32, ''Word64, ''Word
+    ]
 
 -- |Try to infer whether a 'Dec' which defines a type which has the
 -- property that WHNF=NF for its values. This property is derived
