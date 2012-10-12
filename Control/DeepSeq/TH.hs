@@ -218,6 +218,9 @@ deriveNFData tn = do
         hlp (IsStrict, fieldType) = do
             tmp <- typeWhnfIsNf fieldType
             return $ if fromMaybe False tmp then Nothing else Just fieldType
+        hlp (Unpacked, fieldType) = do
+            tmp <- typeWhnfIsNf fieldType
+            return $ if fromMaybe False tmp then Nothing else Just fieldType
 
 -- |Plural version of 'deriveNFData'
 --
