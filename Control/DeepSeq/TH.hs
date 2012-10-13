@@ -1,6 +1,11 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP, TemplateHaskell #-}
 
--- |Module providing Template Haskell based 'NFData' instance
+-- |
+-- Module      : Control.DeepSeq.TH
+-- Stability   : experimental
+-- Portability : GHC
+--
+-- Module providing Template Haskell based 'NFData' instance
 -- generators and WHNF=NF type inspectors.
 --
 -- To use this module enable the @TemplateHaskell@ extension and
@@ -50,6 +55,7 @@ typeWhnfIsNf2 seen (ConT x)
             TyConI dec -> decWhnfIsNf2 (x:seen) dec
             _          -> return Nothing
 
+typeWhnfIsNf2 _ (TupleT 0)               = return $ Just True -- ()
 typeWhnfIsNf2 _ (AppT (AppT ArrowT _) _) = return $ Just True -- a -> b
 typeWhnfIsNf2 _ (AppT ListT _)           = return $ Just False -- [a]
 typeWhnfIsNf2 _ (AppT (TupleT _) _)      = return $ Just False -- (a,b,...)
@@ -98,8 +104,12 @@ decWhnfIsNf2 seen (DataD _ _ _ cons _)                            = reduce `lift
             return $ reduce ms
         | otherwise  = return $ Just False
       where
-        allStrict = all (== IsStrict) fStricts
+        allStrict = all isStrictOrUnpacked fStricts
         (fStricts, fTypes) = unzip $ con2types con
+
+        isStrictOrUnpacked NotStrict = False
+        isStrictOrUnpacked IsStrict  = True
+        isStrictOrUnpacked Unpacked  = True
 
     con2types (NormalC _ ts)   = ts
     con2types (RecC _ vts)     = [ (tst,tt) | (_,tst,tt) <- vts ]
@@ -218,6 +228,9 @@ deriveNFData tn = do
         hlp (IsStrict, fieldType) = do
             tmp <- typeWhnfIsNf fieldType
             return $ if fromMaybe False tmp then Nothing else Just fieldType
+        hlp (Unpacked, fieldType) = do
+            tmp <- typeWhnfIsNf fieldType
+            return $ if fromMaybe False tmp then Nothing else Just fieldType
 
 -- |Plural version of 'deriveNFData'
 --
@@ -240,6 +253,15 @@ getFreeTyVars (SigT t1 _)       = getFreeTyVars t1
 getFreeTyVars (TupleT _)        = mzero
 getFreeTyVars (UnboxedTupleT _) = mzero
 getFreeTyVars (VarT n)          = return n
+#if MIN_VERSION_template_haskell(2,8,0)
+getFreeTyVars (PromotedT _)     = error "getFreeTyVars: PromotedT not supported yet"
+getFreeTyVars (PromotedTupleT _)= error "getFreeTyVars: PromotedTupleT not supported yet"
+getFreeTyVars (PromotedNilT)    = error "getFreeTyVars: PromotedNilT not supported yet"
+getFreeTyVars (PromotedConsT)   = error "getFreeTyVars: PromotedConstT not supported yet"
+getFreeTyVars (StarT)           = error "getFreeTyVars: StarT not supported yet"
+getFreeTyVars (LitT _)          = error "getFreeTyVars: LitT not supported yet"
+getFreeTyVars (ConstraintT)     = error "getFreeTyVars: ConstraintT not supported yet"
+#endif
 
 -- helper
 mkDeepSeqExpr :: [Name] -> Exp

@@ -41,6 +41,10 @@ data Zoo = Zoo0 | Zoo1 !Bar
 
 data Goo = Goo0 | Goo1 !Doo
 
+data EH = EH {-# UNPACK #-} !W64 | EQ {-# NOUNPACK #-} !W64 !Bool
+
+newtype W64 = EA Word64
+
 main :: IO ()
 main = do
     posAss("()",     ())
@@ -72,3 +76,4 @@ main = do
     negAss("[Int]",          [Int])
     negAss("[()]",           [()])
     negAss("Maybe Bool",     Maybe Bool)
+    posAss("EH",             EH)
