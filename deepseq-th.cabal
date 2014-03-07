@@ -27,9 +27,9 @@ library
     other-extensions: CPP, TemplateHaskell
     exposed-modules: Control.DeepSeq.TH
     build-depends:
-        base             >= 4.4 && < 4.7,
+        base             >= 4.4 && < 5,
         deepseq          >= 1.1 && < 1.4,
-        template-haskell >= 2.7 && < 2.9
+        template-haskell >= 2.7
     ghc-options: -Wall
 
 test-suite test-whnf-is-nf
